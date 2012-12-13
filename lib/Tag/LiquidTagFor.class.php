@@ -31,6 +31,15 @@ class LiquidTagFor extends LiquidBlock
      */
     private $_name;
 
+	/**
+     * @var string / int The name of the variable or integer start value
+     */
+	private $_startRange;
+    
+    /**
+     * @var string / int The name of the variable or integer start value
+     */
+    private $_endRange;
 
     /**
      * Constructor
@@ -46,12 +55,22 @@ class LiquidTagFor extends LiquidBlock
 
         $syntaxRegexp = new LiquidRegexp('/(\w+)\s+in\s+(' . LIQUID_ALLOWED_VARIABLE_CHARS . '+)/');
 
+		$syntaxRangeRegexp = new LiquidRegexp('/(\w+)\s+in\s+\\((\d+|' . LIQUID_ALLOWED_VARIABLE_CHARS . '+)\.\.(\d+|' . LIQUID_ALLOWED_VARIABLE_CHARS . '+)\)/');
+
         if ($syntaxRegexp->match($markup))
         {
             $this->_variableName = $syntaxRegexp->matches[1];
             $this->_collectionName = $syntaxRegexp->matches[2];
             $this->_name = $syntaxRegexp->matches[1] . '-' . $syntaxRegexp->matches[2];
             $this->extractAttributes($markup);
+        }
+        elseif ($syntaxRangeRegexp->match($markup)) 
+        {
+        	$this->_collectionName = null;
+        	$this->_variableName = $syntaxRangeRegexp->matches[1];
+        	$this->_startRange = $syntaxRangeRegexp->matches[2];
+        	$this->_endRange = $syntaxRangeRegexp->matches[3];
+        	$this->extractAttributes($markup);
         }
         else
         {
@@ -72,7 +91,24 @@ class LiquidTagFor extends LiquidBlock
             $context->registers['for'] = array();
         }
 
-        $collection = $context->get($this->_collectionName);
+		if (isset($this->_startRange) and isset($this->_endRange)) {
+			
+			$start = is_numeric($this->_startRange) ? $this->_startRange : $context->get($this->_startRange);
+			
+			$end = is_numeric($this->_endRange) ? $this->_endRange : $context->get($this->_endRange);
+			
+			// TO-DO: not memory efficient
+			
+			$collection = array();
+			for($i = $start; $i <= $end; $i++) {
+				$collection[] = $i;
+			}
+			
+		} else {
+		
+       		 $collection = $context->get($this->_collectionName);
+       		 
+       	}
 
         if (is_null($collection) || !is_array($collection) || count($collection) == 0)
         {
